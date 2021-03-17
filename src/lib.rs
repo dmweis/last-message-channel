@@ -16,40 +16,41 @@ pub enum ChannelError {
 }
 
 pub fn latest_message_channel<T>() -> (Sender<T>, Receiver<T>) {
-    let value = Arc::new(Mutex::new(None));
-    let notify = Arc::new(Notify::new());
-    let both_alive = Arc::new(AtomicBool::new(true));
+    let shared_internal = SharedInternalChannel {
+        value: Mutex::new(None),
+        notify: Notify::new(),
+        both_alive: AtomicBool::new(true),
+    };
+    let shared = Arc::new(shared_internal);
 
     let sender = Sender {
-        value: Arc::clone(&value),
-        notify: Arc::clone(&notify),
-        both_alive: Arc::clone(&both_alive),
+        shared: Arc::clone(&shared),
     };
-    let receiver = Receiver {
-        value,
-        notify,
-        both_alive,
-    };
+    let receiver = Receiver { shared };
     (sender, receiver)
 }
 
+struct SharedInternalChannel<T> {
+    value: Mutex<Option<T>>,
+    notify: Notify,
+    both_alive: AtomicBool,
+}
+
 pub struct Sender<T> {
-    value: Arc<Mutex<Option<T>>>,
-    notify: Arc<Notify>,
-    both_alive: Arc<AtomicBool>,
+    shared: Arc<SharedInternalChannel<T>>,
 }
 
 impl<T> Sender<T> {
     pub fn send(&self, value: T) -> Result<(), ChannelError> {
-        if !self.both_alive.load(Ordering::SeqCst) {
+        if !self.shared.both_alive.load(Ordering::SeqCst) {
             Err(ChannelError::ReceiverClosed)
         } else {
-            if let Ok(mut mutex_guard) = self.value.lock() {
+            if let Ok(mut mutex_guard) = self.shared.value.lock() {
                 *mutex_guard = Some(value);
             } else {
                 return Err(ChannelError::PoisonError);
             }
-            self.notify.notify_one();
+            self.shared.notify.notify_one();
             Ok(())
         }
     }
@@ -57,27 +58,25 @@ impl<T> Sender<T> {
 
 impl<T> Drop for Sender<T> {
     fn drop(&mut self) {
-        self.both_alive.store(false, Ordering::SeqCst);
-        self.notify.notify_waiters()
+        self.shared.both_alive.store(false, Ordering::SeqCst);
+        self.shared.notify.notify_waiters()
     }
 }
 
 pub struct Receiver<T> {
-    value: Arc<Mutex<Option<T>>>,
-    notify: Arc<Notify>,
-    both_alive: Arc<AtomicBool>,
+    shared: Arc<SharedInternalChannel<T>>,
 }
 
 impl<T> Receiver<T> {
     pub async fn recv(&self) -> Result<T, ChannelError> {
-        if !self.both_alive.load(Ordering::SeqCst) {
+        if !self.shared.both_alive.load(Ordering::SeqCst) {
             return Err(ChannelError::SenderClosed);
         }
-        self.notify.notified().await;
-        if !self.both_alive.load(Ordering::SeqCst) {
+        self.shared.notify.notified().await;
+        if !self.shared.both_alive.load(Ordering::SeqCst) {
             return Err(ChannelError::SenderClosed);
         }
-        if let Ok(content) = &mut self.value.lock() {
+        if let Ok(content) = &mut self.shared.value.lock() {
             Ok(content
                 .take()
                 .expect("latest_message_channel woken up but empty."))
@@ -87,10 +86,10 @@ impl<T> Receiver<T> {
     }
 
     pub fn try_recv(&self) -> Result<Option<T>, ChannelError> {
-        if !self.both_alive.load(Ordering::SeqCst) {
+        if !self.shared.both_alive.load(Ordering::SeqCst) {
             return Err(ChannelError::SenderClosed);
         }
-        if let Ok(content) = &mut self.value.lock() {
+        if let Ok(content) = &mut self.shared.value.lock() {
             Ok(content.take())
         } else {
             Err(ChannelError::PoisonError)
@@ -100,7 +99,7 @@ impl<T> Receiver<T> {
 
 impl<T> Drop for Receiver<T> {
     fn drop(&mut self) {
-        self.both_alive.store(false, Ordering::SeqCst);
+        self.shared.both_alive.store(false, Ordering::SeqCst);
     }
 }
 
