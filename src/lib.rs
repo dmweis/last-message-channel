@@ -44,7 +44,11 @@ impl<T> Sender<T> {
         if !self.both_alive.load(Ordering::SeqCst) {
             Err(ChannelError::ReceiverClosed)
         } else {
-            *self.value.lock().unwrap() = Some(value);
+            if let Ok(mut mutex_guard) = self.value.lock() {
+                *mutex_guard = Some(value);
+            } else {
+                return Err(ChannelError::PoisonError);
+            }
             self.notify.notify_one();
             Ok(())
         }
