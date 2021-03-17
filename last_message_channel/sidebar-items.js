@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["ChannelError",""]],"fn":[["latest_message_channel",""]],"struct":[["LatestReceiver",""],["LatestSender",""]]});

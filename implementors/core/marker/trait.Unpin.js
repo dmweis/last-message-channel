@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["last_message_channel"] = [{"text":"impl Unpin for ChannelError","synthetic":true,"types":[]},{"text":"impl&lt;T&gt; Unpin for LatestSender&lt;T&gt;","synthetic":true,"types":[]},{"text":"impl&lt;T&gt; Unpin for LatestReceiver&lt;T&gt;","synthetic":true,"types":[]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
