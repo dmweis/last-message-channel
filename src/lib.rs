@@ -15,17 +15,17 @@ pub enum ChannelError {
     PoisonError,
 }
 
-pub fn latest_message_channel<T>() -> (LatestSender<T>, LatestReceiver<T>) {
+pub fn latest_message_channel<T>() -> (Sender<T>, Receiver<T>) {
     let value = Arc::new(Mutex::new(None));
     let notify = Arc::new(Notify::new());
     let both_alive = Arc::new(AtomicBool::new(true));
 
-    let sender = LatestSender {
+    let sender = Sender {
         value: Arc::clone(&value),
         notify: Arc::clone(&notify),
         both_alive: Arc::clone(&both_alive),
     };
-    let receiver = LatestReceiver {
+    let receiver = Receiver {
         value,
         notify,
         both_alive,
@@ -33,13 +33,13 @@ pub fn latest_message_channel<T>() -> (LatestSender<T>, LatestReceiver<T>) {
     (sender, receiver)
 }
 
-pub struct LatestSender<T> {
+pub struct Sender<T> {
     value: Arc<Mutex<Option<T>>>,
     notify: Arc<Notify>,
     both_alive: Arc<AtomicBool>,
 }
 
-impl<T> LatestSender<T> {
+impl<T> Sender<T> {
     pub fn send(&self, value: T) -> Result<(), ChannelError> {
         if !self.both_alive.load(Ordering::SeqCst) {
             Err(ChannelError::ReceiverClosed)
@@ -51,20 +51,20 @@ impl<T> LatestSender<T> {
     }
 }
 
-impl<T> Drop for LatestSender<T> {
+impl<T> Drop for Sender<T> {
     fn drop(&mut self) {
         self.both_alive.store(false, Ordering::SeqCst);
         self.notify.notify_waiters()
     }
 }
 
-pub struct LatestReceiver<T> {
+pub struct Receiver<T> {
     value: Arc<Mutex<Option<T>>>,
     notify: Arc<Notify>,
     both_alive: Arc<AtomicBool>,
 }
 
-impl<T> LatestReceiver<T> {
+impl<T> Receiver<T> {
     pub async fn recv(&self) -> Result<T, ChannelError> {
         if !self.both_alive.load(Ordering::SeqCst) {
             return Err(ChannelError::SenderClosed);
@@ -94,7 +94,7 @@ impl<T> LatestReceiver<T> {
     }
 }
 
-impl<T> Drop for LatestReceiver<T> {
+impl<T> Drop for Receiver<T> {
     fn drop(&mut self) {
         self.both_alive.store(false, Ordering::SeqCst);
     }
