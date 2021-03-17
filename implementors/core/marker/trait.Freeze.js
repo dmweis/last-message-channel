@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["last_message_channel"] = [{"text":"impl Freeze for ChannelError","synthetic":true,"types":[]},{"text":"impl&lt;T&gt; Freeze for LatestSender&lt;T&gt;","synthetic":true,"types":[]},{"text":"impl&lt;T&gt; Freeze for LatestReceiver&lt;T&gt;","synthetic":true,"types":[]}];
+implementors["last_message_channel"] = [{"text":"impl Freeze for ChannelError","synthetic":true,"types":[]},{"text":"impl&lt;T&gt; Freeze for Sender&lt;T&gt;","synthetic":true,"types":[]},{"text":"impl&lt;T&gt; Freeze for Receiver&lt;T&gt;","synthetic":true,"types":[]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
