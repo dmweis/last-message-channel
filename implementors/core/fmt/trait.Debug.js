@@ -1,3 +1,3 @@
 (function() {var implementors = {};
-implementors["last_message_channel"] = [{"text":"impl Debug for ChannelError","synthetic":false,"types":[]}];
+implementors["last_message_channel"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html\" title=\"trait core::fmt::Debug\">Debug</a> for <a class=\"enum\" href=\"last_message_channel/enum.ChannelError.html\" title=\"enum last_message_channel::ChannelError\">ChannelError</a>","synthetic":false,"types":["last_message_channel::ChannelError"]}];
 if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
