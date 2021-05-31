@@ -19,6 +19,7 @@ pub fn latest_message_channel<T>() -> (Sender<T>, Receiver<T>) {
     let shared_internal = SharedInternalChannel {
         value: Mutex::new(None),
         notify: Notify::new(),
+        updated: AtomicBool::new(false),
         both_alive: AtomicBool::new(true),
     };
     let shared = Arc::new(shared_internal);
@@ -33,6 +34,7 @@ pub fn latest_message_channel<T>() -> (Sender<T>, Receiver<T>) {
 struct SharedInternalChannel<T> {
     value: Mutex<Option<T>>,
     notify: Notify,
+    updated: AtomicBool,
     both_alive: AtomicBool,
 }
 
@@ -47,6 +49,7 @@ impl<T> Sender<T> {
         } else {
             if let Ok(mut mutex_guard) = self.shared.value.lock() {
                 *mutex_guard = Some(value);
+                self.shared.updated.store(true, Ordering::SeqCst);
             } else {
                 return Err(ChannelError::PoisonError);
             }
@@ -77,6 +80,7 @@ impl<T> Receiver<T> {
             return Err(ChannelError::SenderClosed);
         }
         if let Ok(content) = &mut self.shared.value.lock() {
+            self.shared.updated.store(false, Ordering::SeqCst);
             Ok(content
                 .take()
                 .expect("latest_message_channel woken up but empty."))
@@ -89,7 +93,10 @@ impl<T> Receiver<T> {
         if !self.shared.both_alive.load(Ordering::SeqCst) {
             return Err(ChannelError::SenderClosed);
         }
-        if let Ok(content) = &mut self.shared.value.lock() {
+        if !self.shared.updated.load(Ordering::SeqCst) {
+            Ok(None)
+        } else if let Ok(content) = &mut self.shared.value.lock() {
+            self.shared.updated.store(false, Ordering::SeqCst);
             Ok(content.take())
         } else {
             Err(ChannelError::PoisonError)
