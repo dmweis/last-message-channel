@@ -163,4 +163,11 @@ mod tests {
         drop(tx);
         assert_eq!(rx.try_recv(), Err(ChannelError::SenderClosed));
     }
+
+    #[tokio::test]
+    async fn fail_to_receive_with_dead_sender_async() {
+        let (tx, rx) = latest_message_channel::<i32>();
+        drop(tx);
+        assert_eq!(rx.recv().await, Err(ChannelError::SenderClosed));
+    }
 }
