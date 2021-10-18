@@ -127,14 +127,11 @@ mod tests {
     #[tokio::test]
     async fn future_await_until_sent() {
         let (tx, rx) = latest_message_channel();
-        tokio::spawn(async move {
+        let handle = tokio::spawn(async move {
             assert_eq!(rx.recv().await.unwrap(), 1);
-            assert_eq!(rx.recv().await.unwrap(), 2);
-            assert_eq!(rx.recv().await.unwrap(), 3);
         });
         tx.send(1).unwrap();
-        tx.send(2).unwrap();
-        tx.send(3).unwrap();
+        handle.await.unwrap();
     }
 
     #[test]
