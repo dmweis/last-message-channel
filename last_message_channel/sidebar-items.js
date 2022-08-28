@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["ChannelError",""]],"fn":[["latest_message_channel",""]],"struct":[["Receiver",""],["Sender",""]]};

@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["last_message_channel"];
